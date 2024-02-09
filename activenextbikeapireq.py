@@ -4,54 +4,61 @@
 import requests
 import sqlite3
 from datetime import datetime
+import os
 
 
 #TODO also insert a column and data for time of request
 
 # function to create table
 def create_table():
-  current_time = datetime.datetime.now().strftime("Y%m%d_%H%M%S")
+  current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
   table_name = f"nextbike_map_data_{current_time}"
-  conn = sqlite3.connect("nextbike_data.db")
+  conn = sqlite3.connect("/home/ludic/Desktop/Codetoserve/pipestations/nextbike_data.db")
   cursor = conn.cursor()
   cursor.execute(f'''
-                CREATE TABLE IF NOT EXISTS {table_name}(
+                CREATE TABLE {table_name}(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 city TEXT,
                 station_id INTEGER,
                 name TEXT,
                 latitude REAL,
                 Longitude REAL,
-                bikes_available INTEGER
+                bikes_available INTEGER,
                 time_of_request TEXT
                 )       
                 ''')
   conn.commit()
   conn.close()
   print(f"table {table_name} created")
+  return table_name
+  
 # insert station data function
   
-def insert_station_data(city, station_data):
+def insert_station_data(city, station_data, table_name):
     conn = sqlite3.connect("nextbike_data.db")
     cursor = conn.cursor()
     request_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print("connected to table in insert function")
     for place in station_data:
-         cursor.execute('''
-                         INSERT INTO nextbike_map_data (city, station_id, name, latitude, longitude, bikes_available)
-                         VALUES (?, ?, ?, ?, ?, ?)
+         cursor.execute(f'''
+                         INSERT INTO {table_name} (city, station_id, name, latitude, longitude, bikes_available, time_of_request)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)
                          ''', (
                               city,
                               place.get('number'),
                               place.get('name'),
                               place.get('lat'),
                               place.get('lng'),
-                              place.get('bikes_available_to_rent')
+                              place.get('bikes_available_to_rent'),
                               request_datetime
                          ))
     conn.commit()
     print("insert function completed")
     conn.close()
+
+#pwd
+print(f"Current working directory: {os.getcwd()}")  # Add this line for debugging
+
 
 # make API request
 base_url = "https://maps.nextbike.net/"
@@ -73,18 +80,18 @@ if response.status_code == 200:
           if cities_data:
               # Assuming "places" is the correct key for stations
               station_data = cities_data[0].get("places", [])
-              print(station_data)
+              #print(station_data)
               
           else:
               print("No cities data")
       else:
           print("No countries data")
       
-      print(station_data, "this was station")
+      #print(station_data, "this was station")
       print("initiate create table")
-      create_table() 
+      table_name = create_table()      
       print("create table complete initiate insert function")
-      insert_station_data(params["city"], station_data)
+      insert_station_data(params["city"], station_data, table_name)
       print("insert function complete")
 else:
      print("some error")
